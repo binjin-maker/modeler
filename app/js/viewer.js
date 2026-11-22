@@ -2,7 +2,7 @@ import * as THREE from "../vendor/three.js";
 import { OrbitControls } from "../vendor/three.js";
 import { outline } from "./geom2d.js";
 
-const HOVER = new THREE.Color("#ffb347");
+const HOVER = new THREE.Color("#6ad1ff");
 const PICKED = new THREE.Color("#ffd21f");
 const SEL_PART = new THREE.Color("#7fd0ff");
 
