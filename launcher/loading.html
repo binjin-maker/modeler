@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>DOOG Modeler</title>
+<style>
+html,body{margin:0;height:100%;background:radial-gradient(ellipse at 50% 30%,#2a3442,#11161d);color:#dfe7f1;font:14px "Segoe UI",system-ui,sans-serif;display:grid;place-items:center}
+.box{width:420px;text-align:center}
+h1{font-weight:400;font-size:28px;margin:0 0 6px}h1 b{color:#ff7a1a;font-weight:800}
+.bar{height:8px;background:#1a212b;border-radius:5px;overflow:hidden;margin:22px 0 10px;border:1px solid #2c3746}
+.fill{height:100%;width:0;background:linear-gradient(90deg,#ff7a1a,#ffb066);transition:width .25s}
+#msg{color:#8796a8;min-height:20px}.err{color:#ff8a8a!important}
+</style></head>
+<body><div class="box"><h1><b>DOOG</b> Modeler</h1><div id="msg">Starting…</div><div class="bar"><div class="fill" id="fill"></div></div><div id="sz" style="color:#8796a8;font-size:12px"></div></div>
+<script>
+const H={"X-Modeler":"1"};
+const es=new EventSource("/api/events");
+const show=s=>{
+  const m=document.getElementById("msg");
+  m.textContent=s.message||s.state;
+  m.className=s.state==="error"?"err":"";
+  if(s.total){document.getElementById("fill").style.width=(100*s.done/s.total).toFixed(1)+"%";document.getElementById("sz").textContent=(s.done/1048576).toFixed(1)+" / "+(s.total/1048576).toFixed(1)+" MB";}
+  if(s.ready) location.reload();
+};
+es.addEventListener("status",e=>show(JSON.parse(e.data)));
+es.addEventListener("ready",()=>location.reload());
+setInterval(()=>fetch("/api/status",{headers:H}).then(r=>r.json()).then(show).catch(()=>{}),1500);
+</script></body></html>
