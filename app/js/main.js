@@ -146,6 +146,7 @@ function resolveFeature(f, vs) {
   }
   for (const fld of def.fields) {
     if (fld.type !== "num") continue;
+    if (p[fld.key] === undefined || p[fld.key] === null) { p[fld.key] = 0; continue; }
     if (fld.show && !fld.show(f.params)) { try { p[fld.key] = evalExpr(p[fld.key], vs); } catch { p[fld.key] = 0; } continue; }
     try { p[fld.key] = evalExpr(p[fld.key], vs); }
     catch (e) { throw new Error(`${fld.label}: ${e.message}`); }

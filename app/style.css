@@ -58,7 +58,8 @@ main { flex: 1; display: flex; min-height: 0; }
 #left { width: 250px; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
 #right { width: 300px; border-left: 1px solid var(--line); }
 .sec { padding: 6px 0; border-bottom: 1px solid var(--line); }
-.sec:first-child { flex: 1; overflow-y: auto; }
+.sec:first-child { flex: 1; overflow-y: auto; min-height: 120px; }
+.sec:last-child { max-height: 38%; overflow-y: auto; }
 .st { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 4px 12px; }
 .empty { color: var(--muted); padding: 8px 12px; }
 .fi, .pi { display: flex; align-items: center; gap: 7px; padding: 4px 8px 4px 12px; cursor: pointer; border-left: 3px solid transparent; }
