@@ -1,12 +1,12 @@
-# DOOG Modeler
+# Velocity
 
 A parametric 3D CAD program, like Onshape but easier. You sketch, extrude, fillet, shell, pattern, and export for 3D printing, and the app **updates itself from this repo within seconds of every push**.
 
 Built on **OpenCascade** (a real B-rep CAD kernel, via replicad), so you get exact solids, real fillets, and STEP export.
 
 ## Install (Windows)
-1. Download [`dist/Modeler.ex_`](dist/Modeler.ex_).
-2. Rename it to **`Modeler.exe`**.
+1. Download [`dist/Velocity.ex_`](dist/Velocity.ex_).
+2. Rename it to **`Velocity.exe`**.
 3. Run it. The first launch downloads about 24 MB, then it opens in its own window.
 
 It needs Microsoft Edge or Chrome, which every Windows 10/11 PC already has.
@@ -26,7 +26,7 @@ It needs Microsoft Edge or Chrome, which every Windows 10/11 PC already has.
 📖 **Full guide: [app/guide.md](app/guide.md)** (also built into the app; press F1)
 
 ## How fast updates work
-`Modeler.exe` is a small launcher. It serves the app from a local cache and polls this repo's `main` branch every 10 seconds using conditional ETag requests. "Nothing changed" responses are free and don't count against GitHub's rate limit. When a new commit lands, it downloads only the files that changed (each one hash-checked against git) and swaps the folder atomically. Then it pushes an event to the open window, which reloads in place with your model, selection, and camera kept. The launcher also updates itself when `dist/launcher-version.txt` goes up.
+`Velocity.exe` is a small launcher. It serves the app from a local cache and polls this repo's `main` branch every 10 seconds using conditional ETag requests. "Nothing changed" responses are free and don't count against GitHub's rate limit. When a new commit lands, it downloads only the files that changed (each one hash-checked against git) and swaps the folder atomically. Then it pushes an event to the open window, which reloads in place with your model, selection, and camera kept. The launcher also updates itself when `dist/launcher-version.txt` goes up.
 
 ## Repo layout
 | Path | What |
@@ -34,11 +34,10 @@ It needs Microsoft Edge or Chrome, which every Windows 10/11 PC already has.
 | `app/` | The app (plain ES modules, no build step). This is what gets auto-updated. |
 | `app/js/` | UI, viewport, sketcher, features, I/O |
 | `app/worker/` | Geometry worker plus the bundled OpenCascade kernel |
-| `launcher/` | Go source for `Modeler.exe` |
-| `dist/` | Prebuilt launcher (`.ex_`, so it downloads cleanly) |
-| `build.sh` | `./build.sh launcher` or `./build.sh kernel` |
+| `launcher/` | Go source for `Velocity.exe` |
+| `dist/` | Prebuilt launcher `Velocity.ex_` (`.ex_` so it downloads cleanly). `Modeler.ex_` is the same file, kept so older installs auto-upgrade. |
+| `app/icons/` | App and exe icons (`tools/mkicon.py` builds the `.ico` + exe resource) |
+| `build.sh` | `./build.sh launcher`, `./build.sh icon`, or `./build.sh kernel` |
 
 To run in a browser without the launcher: `cd app && python -m http.server`, then open http://localhost:8000.
 
----
-DOOG unincorporated

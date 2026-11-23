@@ -1,6 +1,6 @@
-# DOOG Modeler — Full Guide
+# Velocity — Full Guide
 
-DOOG Modeler is a parametric 3D CAD program, like Onshape but stripped down so it's quicker to learn. You build a part from a list of **features** (sketch it, extrude it, round the edges, cut some holes). Every feature stays editable. Change a number anywhere and the whole model rebuilds.
+Velocity is a parametric 3D CAD program, like Onshape but stripped down so it's quicker to learn. You build a part from a list of **features** (sketch it, extrude it, round the edges, cut some holes). Every feature stays editable. Change a number anywhere and the whole model rebuilds.
 
 Under the hood it runs **OpenCascade**, a real B-rep CAD kernel. Your models are exact solids, not meshes, so fillets come out truly round, STEP exports open in Onshape, Fusion, or SolidWorks, and volume and mass numbers are accurate.
 
@@ -10,8 +10,8 @@ Under the hood it runs **OpenCascade**, a real B-rep CAD kernel. Your models are
 
 ## Installing and updates
 
-1. Download **`dist/Modeler.ex_`** from the GitHub repo.
-2. Rename it to **`Modeler.exe`** and put it wherever you want (Desktop, a tools folder, etc).
+1. Download **`dist/Velocity.ex_`** from the GitHub repo.
+2. Rename it to **`Velocity.exe`** and put it wherever you want (Desktop, a tools folder, etc).
 3. Double-click it. The first launch downloads the app (about 24 MB, mostly the CAD kernel). After that it starts instantly.
 
 The app opens in its own window (an Edge or Chrome "app window" with no tabs or address bar). Closing that window shuts down the launcher too.
@@ -29,9 +29,9 @@ The version shows in the top-right corner (green dot plus a short commit ID).
 ### Where your files go
 | What | Where |
 |---|---|
-| Saved projects (`.dmodel`) | `Documents\DOOG Modeler\` |
-| Exports (STL, 3MF, STEP, OBJ, PNG) | `Documents\DOOG Modeler\Exports\` |
-| Autosave and app cache | `%LOCALAPPDATA%\DOOG Modeler\` |
+| Saved projects (`.velocity`) | `Documents\Velocity\` |
+| Exports (STL, 3MF, STEP, OBJ, PNG) | `Documents\Velocity\Exports\` |
+| Autosave and app cache | `%LOCALAPPDATA%\Velocity\` |
 
 Your work is **autosaved constantly**. If the app closes unexpectedly, you'll find your model as you left it the next time you open it.
 
@@ -256,8 +256,8 @@ In a number box, [[↑]] and [[↓]] nudge the value by 1 (Shift: 10, Alt: 0.1).
 
 ## Saving and opening
 
-- **Save** ([[Ctrl+S]]) saves to `Documents\DOOG Modeler\<name>.dmodel`. [[Ctrl+Shift+S]] saves under a new name.
-- **Open** ([[Ctrl+O]]) lists your projects, newest first. You can also open a `.dmodel` file from anywhere, or save a copy.
+- **Save** ([[Ctrl+S]]) saves to `Documents\Velocity\<name>.velocity`. [[Ctrl+Shift+S]] saves under a new name.
+- **Open** ([[Ctrl+O]]) lists your projects, newest first. You can also open a `.velocity` file from anywhere, or save a copy.
 - **New** starts an empty project. The old one is still in your saved projects if you saved it.
 - An orange dot next to the name means there are unsaved changes. Autosave protects you anyway, but use **Save** to keep named versions.
 
@@ -335,5 +335,5 @@ Click **Export** in the top bar:
 
 - `app/` is the whole app: plain ES modules, no build step for app code. Edit, commit, and push to `main`, and every open copy updates within about 10 seconds.
 - `app/worker/kernel.js` and `replicad_single.wasm` are the bundled CAD kernel (replicad + OpenCascade). They rarely change.
-- `launcher/` is the Go source for `Modeler.exe`. Run `./build.sh launcher` to rebuild `dist/Modeler.ex_`. Bump `LauncherVersion` in `main.go` **and** `dist/launcher-version.txt` to push a launcher self-update.
+- `launcher/` is the Go source for `Velocity.exe`. Run `./build.sh launcher` to rebuild `dist/Velocity.ex_`. Bump `LauncherVersion` in `main.go` **and** `dist/launcher-version.txt` to push a launcher self-update.
 - To run in a browser for testing: `cd app && python -m http.server` and open `http://localhost:8000`. Saving uses browser storage in that mode.

@@ -35,7 +35,7 @@ func documentsDir() string {
 }
 
 func fatal(msg string) {
-	t, _ := syscall.UTF16PtrFromString("DOOG Modeler")
+	t, _ := syscall.UTF16PtrFromString("Velocity")
 	m, _ := syscall.UTF16PtrFromString(msg)
 	pMsgBox.Call(0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)), 0x10)
 	os.Exit(1)

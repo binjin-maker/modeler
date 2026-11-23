@@ -25,8 +25,8 @@ code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font: 12
 
 #app { display: flex; flex-direction: column; height: 100vh; }
 #top { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
-.logo { font-size: 15px; letter-spacing: .3px; margin-right: 6px; white-space: nowrap; }
-.logo b { color: var(--accent); font-weight: 800; }
+.logo { display: flex; align-items: center; gap: 7px; font-size: 16px; font-weight: 800; letter-spacing: .4px; margin-right: 6px; white-space: nowrap; }
+.logo img { width: 24px; height: 24px; }
 .pname { background: transparent; border-color: transparent; font-size: 14px; font-weight: 600; width: 220px; }
 .pname:hover { border-color: var(--line); }
 .dirty { color: var(--accent); width: 10px; }

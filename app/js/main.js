@@ -665,7 +665,7 @@ async function exportAs(fmtName, opts = {}) {
       const actions = [{ label: "Show in folder", fn: () => io.openPath(saved.path, "folder") }];
       if (io.info?.bambu && fmtName !== "step") actions.unshift({ label: "Open in Bambu Studio", fn: () => io.openPath(saved.path, "bambu") });
       if (opts.bambu && io.info?.bambu) io.openPath(saved.path, "bambu");
-      toast(`Saved ${files.length > 1 ? files.length + " files" : files[0].name} to Documents › DOOG Modeler › Exports`, "ok", actions);
+      toast(`Saved ${files.length > 1 ? files.length + " files" : files[0].name} to Documents › Velocity › Exports`, "ok", actions);
     } else toast("Exported " + files.map((f) => f.name).join(", "), "ok");
   } catch (e) { toast("Export failed: " + e.message, "err"); }
 }
@@ -689,7 +689,7 @@ async function saveProject(as) {
     await io.save(name, S.project);
     S.savedName = name; S.dirty = false;
     autosaveSoon();
-    toast("Saved “" + name + "”" + (io.desktop ? " to Documents › DOOG Modeler" : " in this browser"), "ok");
+    toast("Saved “" + name + "”" + (io.desktop ? " to Documents › Velocity" : " in this browser"), "ok");
     renderTop();
   } catch (e) { toast("Save failed: " + e.message, "err"); }
 }
@@ -724,7 +724,7 @@ function renderTop() {
   const name = h("input", { class: "pname", value: S.project.name, spellcheck: "false", title: "Project name",
     onchange: (e) => { S.project.name = e.target.value.trim() || "Untitled"; commit(true); } });
   t.append(
-    h("div", { class: "logo", html: `<b>DOOG</b> Modeler` }),
+    h("div", { class: "logo", html: `<img src="icons/velocity.svg" alt=""><span>Velocity</span>` }),
     name,
     h("span", { class: "dirty" }, S.dirty ? "●" : ""),
     h("div", { class: "tb" },
@@ -1209,9 +1209,9 @@ function showOpen() {
         h("button", { class: "oname", onclick: () => openProject(it.name) }, it.name, h("small", {}, new Date(it.modified).toLocaleString())),
         h("button", { class: "mini", title: "Delete", html: ICONS.trash, onclick: async () => { if (confirmBox(`Delete “${it.name}”?`)) { await io.remove(it.name); showOpen(); } } })));
     }
-    body.append(h("div", { class: "row" }, h("button", { class: "btn", onclick: () => { const i = h("input", { type: "file", accept: ".dmodel,.json" }); i.onchange = async () => { const t = await i.files[0].text(); loadProject(JSON.parse(t)); closeModal(); }; i.click(); } }, "Open a .dmodel file…"),
-      h("button", { class: "btn", onclick: () => io.exportFile((S.project.name || "model") + ".dmodel", JSON.stringify(S.project)).then((r) => toast(r ? "Saved to Exports folder" : "Downloaded", "ok")) }, "Save copy as .dmodel")));
-    if (io.desktop) body.append(h("p", { class: "muted" }, "Projects live in Documents › DOOG Modeler."));
+    body.append(h("div", { class: "row" }, h("button", { class: "btn", onclick: () => { const i = h("input", { type: "file", accept: ".velocity,.dmodel,.json" }); i.onchange = async () => { const t = await i.files[0].text(); loadProject(JSON.parse(t)); closeModal(); }; i.click(); } }, "Open a .velocity file…"),
+      h("button", { class: "btn", onclick: () => io.exportFile((S.project.name || "model") + ".velocity", JSON.stringify(S.project)).then((r) => toast(r ? "Saved to Exports folder" : "Downloaded", "ok")) }, "Save copy as .velocity")));
+    if (io.desktop) body.append(h("p", { class: "muted" }, "Projects live in Documents › Velocity."));
   });
 }
 function confirmBox(t) { return window.confirm(t); }
@@ -1260,7 +1260,7 @@ function showSettings() {
     h("label", { class: "fl" }, h("span", {}, "Theme"), h("div", { class: "seg" }, ...[["dark", "Dark"], ["light", "Light"]].map(([v, l]) => h("button", { class: st.theme === v ? "on" : "", onclick: () => { st.theme = v; saveSettings(); applyTheme(); showSettings(); } }, l)))),
     h("label", { class: "fl" }, h("span", {}, "Display quality"), h("div", { class: "seg" }, ...[[0.5, "Fast"], [1, "Normal"], [2, "Smooth"]].map(([v, l]) => h("button", { class: st.quality === v ? "on" : "", onclick: () => { st.quality = v; saveSettings(); rebuild(0); showSettings(); } }, l)))),
     h("label", { class: "tg" }, h("input", { type: "checkbox", checked: st.autoReload, onchange: (e) => { st.autoReload = e.target.checked; saveSettings(); } }), h("span", {}, "Apply app updates instantly (your work is kept)")),
-    h("p", { class: "muted" }, io.desktop ? `Desktop app · version ${io.version} · launcher v${io.launcher}` : "Running in a browser — no auto-update here. Use Modeler.exe for that."),
+    h("p", { class: "muted" }, io.desktop ? `Desktop app · version ${io.version} · launcher v${io.launcher}` : "Running in a browser — no auto-update here. Use Velocity.exe for that."),
     io.desktop ? h("button", { class: "btn", onclick: () => io.openPath("", "docs") }, "Open my projects folder") : null,
   );
   modal("Settings", body);
@@ -1268,7 +1268,7 @@ function showSettings() {
 function applyTheme() { document.documentElement.dataset.theme = S.settings.theme; }
 async function showHelp(section) {
   const body = h("div", { class: "mb help" }, h("p", {}, "Loading guide…"));
-  modal("How to use DOOG Modeler", body, { cls: "huge" });
+  modal("How to use Velocity", body, { cls: "huge" });
   try {
     const md = await (await fetch(new URL("../guide.md", import.meta.url), { cache: "no-cache" })).text();
     const { html, toc } = renderMarkdown(md);

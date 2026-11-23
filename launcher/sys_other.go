@@ -10,7 +10,7 @@ import (
 )
 
 func documentsDir() string {
-	if d := os.Getenv("DOOG_DOCS"); d != "" {
+	if d := os.Getenv("VELOCITY_DOCS"); d != "" {
 		return d
 	}
 	home, _ := os.UserHomeDir()
@@ -23,7 +23,7 @@ func fatal(msg string) {
 }
 
 func openWindow(url string) {
-	if os.Getenv("DOOG_NO_BROWSER") != "" {
+	if os.Getenv("VELOCITY_NO_BROWSER") != "" {
 		fmt.Println("Serving at", url)
 		return
 	}

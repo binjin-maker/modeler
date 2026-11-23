@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ./build.sh kernel   - rebuild app/worker/kernel.js + wasm and app/vendor/three.js from npm
-# ./build.sh launcher - rebuild dist/Modeler.ex_ (Windows) from launcher/
+# ./build.sh launcher - rebuild dist/Velocity.ex_ (Windows) from launcher/
+# ./build.sh icon     - regenerate exe icon resource + .ico from app/icons/icon-*.png
 set -e
 cd "$(dirname "$0")"
 what="${1:-launcher}"
@@ -15,8 +16,12 @@ if [ "$what" = "kernel" ] || [ "$what" = "all" ]; then
   cp "$tmp/t.out.js" app/vendor/three.js
   rm -rf "$tmp"
 fi
+if [ "$what" = "icon" ] || [ "$what" = "all" ]; then
+  python3 tools/mkicon.py app/icons
+fi
 if [ "$what" = "launcher" ] || [ "$what" = "all" ]; then
-  (cd launcher && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-H windowsgui -s -w" -o ../dist/Modeler.ex_ .)
+  (cd launcher && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-H windowsgui -s -w" -o ../dist/Velocity.ex_ .)
+  cp dist/Velocity.ex_ dist/Modeler.ex_
   grep -oP 'LauncherVersion = \K\d+' launcher/main.go > dist/launcher-version.txt
-  echo "Built dist/Modeler.ex_ (launcher v$(cat dist/launcher-version.txt))"
+  echo "Built dist/Velocity.ex_ (launcher v$(cat dist/launcher-version.txt))"
 fi

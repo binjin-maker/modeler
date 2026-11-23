@@ -1,4 +1,4 @@
-// DOOG Modeler launcher: keeps the app in sync with GitHub, serves it locally, opens it in an app window.
+// Velocity launcher: keeps the app in sync with GitHub, serves it locally, opens it in an app window.
 package main
 
 import (
@@ -28,7 +28,7 @@ import (
 const (
 	Repo            = "binjin-maker/modeler"
 	Branch          = "main"
-	LauncherVersion = 1
+	LauncherVersion = 2
 	DefaultPort     = 47823
 	PollEvery       = 10 * time.Second
 )
@@ -88,12 +88,13 @@ func main() {
 	if err != nil {
 		base = os.TempDir()
 	}
-	dataDir = filepath.Join(base, "DOOG Modeler")
-	docsDir = filepath.Join(documentsDir(), "DOOG Modeler")
+	dataDir = migrate(filepath.Join(base, "DOOG Modeler"), filepath.Join(base, "Velocity"))
+	docsDir = migrate(filepath.Join(documentsDir(), "DOOG Modeler"), filepath.Join(documentsDir(), "Velocity"))
 	exportsDir = filepath.Join(docsDir, "Exports")
 	for _, d := range []string{dataDir, docsDir, exportsDir} {
 		os.MkdirAll(d, 0o755)
 	}
+	renameOldProjects()
 	cleanupOldExe()
 	loadState()
 
@@ -139,6 +140,29 @@ func listen() (net.Listener, int, bool) {
 	return ln, ln.Addr().(*net.TCPAddr).Port, false
 }
 
+// ---------- old-name migration ----------
+func migrate(oldDir, newDir string) string {
+	if dirExists(oldDir) && !dirExists(newDir) {
+		if os.Rename(oldDir, newDir) != nil {
+			return oldDir
+		}
+	}
+	return newDir
+}
+
+func renameOldProjects() {
+	entries, _ := os.ReadDir(docsDir)
+	for _, e := range entries {
+		n := e.Name()
+		if !e.IsDir() && strings.HasSuffix(strings.ToLower(n), ".dmodel") {
+			nn := filepath.Join(docsDir, strings.TrimSuffix(n, filepath.Ext(n))+".velocity")
+			if _, err := os.Stat(nn); err != nil {
+				os.Rename(filepath.Join(docsDir, n), nn)
+			}
+		}
+	}
+}
+
 // ---------- state ----------
 func loadState() {
 	b, err := os.ReadFile(filepath.Join(dataDir, "state.json"))
@@ -182,14 +206,14 @@ func updater() {
 
 func ghGet(u string, accept string, etag string) (*http.Response, error) {
 	req, _ := http.NewRequest("GET", u, nil)
-	req.Header.Set("User-Agent", "DOOG-Modeler-Launcher")
+	req.Header.Set("User-Agent", "Velocity-Launcher")
 	if accept != "" {
 		req.Header.Set("Accept", accept)
 	}
 	if etag != "" {
 		req.Header.Set("If-None-Match", etag)
 	}
-	if t := os.Getenv("DOOG_GITHUB_TOKEN"); t != "" && strings.Contains(u, "api.github.com") {
+	if t := os.Getenv("VELOCITY_GITHUB_TOKEN"); t != "" && strings.Contains(u, "api.github.com") {
 		req.Header.Set("Authorization", "Bearer "+t)
 	}
 	return httpc.Do(req)
@@ -258,7 +282,7 @@ func install(sha string) error {
 		s.State = "updating"
 		s.Message = "Downloading update…"
 		if first {
-			s.Message = "Downloading DOOG Modeler (first launch)…"
+			s.Message = "Downloading Velocity (first launch)…"
 		}
 	})
 	r, err := ghGet(fmt.Sprintf("https://api.github.com/repos/%s/git/trees/%s?recursive=1", Repo, sha), "application/vnd.github+json", "")
@@ -292,7 +316,7 @@ func install(sha string) error {
 		if e.Path == "dist/launcher-version.txt" {
 			launcherVer = &tree.Tree[i]
 		}
-		if e.Path == "dist/Modeler.ex_" {
+		if e.Path == "dist/Velocity.ex_" {
 			launcherExe = &tree.Tree[i]
 		}
 	}
@@ -655,7 +679,7 @@ func routes() http.Handler {
 		list := []item{}
 		entries, _ := os.ReadDir(docsDir)
 		for _, e := range entries {
-			if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".dmodel") {
+			if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".velocity") {
 				continue
 			}
 			info, err := e.Info()
@@ -668,7 +692,7 @@ func routes() http.Handler {
 		writeJSON(w, list)
 	})
 	mux.HandleFunc("/api/project", func(w http.ResponseWriter, r *http.Request) {
-		p := filepath.Join(docsDir, cleanName(r.URL.Query().Get("name"))+".dmodel")
+		p := filepath.Join(docsDir, cleanName(r.URL.Query().Get("name"))+".velocity")
 		switch r.Method {
 		case "GET":
 			b, err := os.ReadFile(p)

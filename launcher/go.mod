@@ -1,3 +1,3 @@
-module doog/modeler-launcher
+module velocity/launcher
 
 go 1.24.7

@@ -89,7 +89,7 @@ export const io = {
 
 // ---------- mesh writers ----------
 export function toOBJ(meshes, scale = 1) {
-  let out = "# DOOG Modeler\n", base = 1;
+  let out = "# Velocity\n", base = 1;
   for (const m of meshes) {
     out += `o ${m.name.replace(/\s+/g, "_")}\n`;
     const v = m.vertices;
@@ -113,7 +113,7 @@ export function to3MF(meshes, scale = 1) {
     objs += `<object id="${id}" name="${esc(m.name)}" type="model"><mesh><vertices>${vs.join("")}</vertices><triangles>${ts.join("")}</triangles></mesh></object>`;
     items += `<item objectid="${id}"/>`;
   });
-  const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Application">DOOG Modeler</metadata><resources>${objs}</resources><build>${items}</build></model>`;
+  const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Application">Velocity</metadata><resources>${objs}</resources><build>${items}</build></model>`;
   const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
   const rels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`;
   return zipStore([["[Content_Types].xml", enc.encode(types)], ["_rels/.rels", enc.encode(rels)], ["3D/3dmodel.model", enc.encode(model)]]);
