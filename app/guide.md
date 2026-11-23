@@ -96,6 +96,38 @@ Now click **Extrude 1** in the feature list and change the distance. Everything 
 
 ---
 
+## Tinker mode (the easy way)
+
+Click **Tinker** in the top bar for a Tinkercad-style modeler. There are no sketches and no feature list: you just stack and cut simple shapes.
+
+1. Click a shape in the ribbon, such as **Box**, **Cylinder**, **Sphere**, **Cone**, **Pyramid**, **Wedge**, **Tube**, **Torus**, **Dome**, **Prism**, or **Star**. It drops onto the workplane in a free spot.
+2. **Drag** a shape to slide it around. It snaps to the **Grid** in the ribbon.
+3. With one shape selected, use its handles:
+   - **White boxes**: resize (width, depth, height). The opposite side stays put.
+   - **Blue cone**: lift the shape up or down.
+   - **Orange ring**: rotate in 15° steps (hold Shift for 1° steps).
+4. To cut a hole, make a shape a **Hole** (the ribbon's *Add as → Hole*, the **Hole/Solid** button, or [[H]]). Holes show up see-through.
+5. To combine shapes, Shift-click several (or [[Ctrl+A]]) and click **Group** ([[Ctrl+G]]). Solids merge, and every hole in the group cuts into them. **Ungroup** ([[Ctrl+Shift+G]]) splits them apart again, and you can group groups.
+6. The right panel has exact numbers: size, position, tilt and turn, color, and shape extras like corner radius, sides, wall thickness, star depth, and top size.
+
+| Key | Action |
+|---|---|
+| Arrows | Nudge one grid step (Shift: ×10) |
+| [[PgUp]] / [[PgDn]] | Move up / down |
+| [[D]] | Drop to the workplane |
+| [[H]] | Toggle hole / solid |
+| `[` / `]` | Rotate −15° / +15° (Shift: 1°) |
+| [[Ctrl+D]] | Duplicate |
+| [[Ctrl+C]] / [[Ctrl+V]] | Copy / paste |
+| [[Ctrl+G]] / [[Ctrl+Shift+G]] | Group / ungroup |
+| [[Del]] | Delete |
+
+With multiple shapes selected, the right panel also has **Align** (min, center, or max on X, Y, and Z).
+
+**Tinker + Pro:** everything you build in Tinker is saved as a single **Tinker scene** feature. Switch to **Pro** and you can keep going: fillet the edges, shell it, pattern it, run **Casting** on it, or export it. While you're in Tinker mode, any Pro features that come after the scene are hidden until you switch back.
+
+---
+
 ## Sketching
 
 A sketch is a set of 2D shapes on a flat plane. Shapes that enclose an area become the **profile** that Extrude, Revolve, and Loft turn into 3D.
@@ -203,6 +235,37 @@ Repeats around an axis, for bolt circles, spokes, and gear teeth. Set the **Axis
 
 ### Mirror [[M]]
 Mirrors a feature or a part across the YZ, XZ, or XY plane (with an optional **offset**). Mirroring a part can merge the copy with the original, which is useful for symmetric parts: model one half, then mirror it.
+
+### Casting
+Turns a part into a ready-to-cast **pattern** and tells you which metals your setup can pour. Pick the part, then choose:
+
+- **Process**:
+  | Process | Mold survives | Notes |
+  |---|---|---|
+  | Sand casting | ~1700 °C | Two-part flask (cope and drag). Needs draft and no undercuts. Can split the pattern at the parting line. |
+  | Lost-PLA (investment) | ~1200 °C | Print the gated pattern, invest it, burn out the PLA, pour. Any shape works. |
+  | Plaster mold | ~1100 °C | Two-part plaster mold, which can be generated for you. Must be bone-dry. |
+  | High-temp silicone | ~320 °C | Two-part mold, which can be generated. Flexes, so small undercuts are OK. |
+  | 3D-printed mold | ~90 °C | Print the mold halves directly. Field's metal, resin, and similar only. |
+- **Pour**: the metal or material you plan to use. All the sizing is based on it.
+- **Your heat source**: hot water, stove/torch, small propane furnace, big furnace, or induction.
+
+What it generates automatically:
+- **Pouring basin** and a **tapered sprue**, sized with Bernoulli flow so the metal doesn't suck in air. There's a **sprue well** at the bottom to soften the drop.
+- A **center-fed runner** that splits evenly to **1–4 gates**. Each gate is cut to exactly reach your part, so the metal arrives at the same time from every side. Gating uses a calm 1 : 2 : 2 ratio for aluminum and similar metals.
+- **Risers (feeders)** on the **thickest sections**, found by firing rays through your part. They're sized with Chvorinov's rule (the riser freezes after the casting) and checked against the metal's shrink volume.
+- **Vents** at the high points, so trapped air can escape.
+- **Shrink allowance**: the pattern is scaled up by the metal's shrinkage (aluminum +1.3%, bronze +1.5%, and so on).
+- A **parting line** at the widest cross-section (or set it yourself under *More options*).
+- **Mold halves** (plaster, silicone, or printed) with **alignment keys**, laid out next to each other ready to print. For sand, you can **split the pattern** at the parting line instead.
+
+What it tells you (in the panel):
+- **What can you pour?** Every metal gets ✓ works, **!** risky, or ✕ won't work, with the reason: the mold can't take the heat, your heat source isn't hot enough, or the walls are too thin for that metal to fill. Click a metal to switch to it.
+- **Pour plan**: pour temperature, casting weight, metal to melt (including the gating), crucible size, pour time, and yield.
+- **Gating sizes**, wall thickness range, parting height, and flask or mold block size.
+- **Warnings**: undercuts that won't release, vertical walls that need draft, thick-next-to-thin sections, and metals that won't fill.
+
+> Safety: molten metal plus moisture can explode violently. Pre-heat tools and molds, keep everything bone dry, wear leather boots, gloves, and a face shield, and never cast zinc or brass without good ventilation.
 
 ### Move / Rotate
 Moves and/or rotates a whole part. Set **Rotate°** and **Rotate about** (with an optional pivot under *More options*). Tick **Make a copy** to leave the original in place.

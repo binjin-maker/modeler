@@ -1,4 +1,5 @@
 // Feature registry: defaults + property-panel layout for each feature type.
+import { METALS, PROCESSES, FURNACES } from "./castingdb.js";
 const ic = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 
 export const ICONS = {
@@ -56,6 +57,19 @@ export const ICONS = {
   persp: ic('<path d="M3 6l7 2v8l-7 2zM10 8l11-3v14l-11-3"/>'),
   sun: ic('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>'),
   examples: ic('<path d="M4 5a2 2 0 012-2h12v16H6a2 2 0 00-2 2z"/><path d="M4 19V5"/><path d="M9 7h6"/>'),
+  casting: ic('<path d="M3 5h9l-1.5 4H4.5z"/><path d="M10.5 9c1.5 2 2 3.5 2 5"/><path d="M12.5 14v1"/><path d="M6 17h12v4H6z"/><path d="M9 17v-2h2v2"/>'),
+  tinker: ic('<rect x="3" y="12" width="8" height="8" rx="1"/><circle cx="17" cy="16" r="4"/><path d="M12 3l4 6H8z"/>'),
+  pro: ic('<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M3 4h7M3 8h4"/>'),
+  wedge: ic('<path d="M4 19h16L4 7z"/>'),
+  pyramid: ic('<path d="M12 4l8 15H4z"/><path d="M12 4v15"/>'),
+  dome: ic('<path d="M3 18a9 9 0 0118 0z"/>'),
+  tube: ic('<ellipse cx="12" cy="6" rx="7" ry="3"/><ellipse cx="12" cy="6" rx="3.5" ry="1.4"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/>'),
+  prism: ic('<path d="M7 4h10l4 8-4 8H7l-4-8z"/>'),
+  star: ic('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'),
+  group: ic('<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/><path d="M11 7h4v4M13 17H9v-4" stroke-dasharray="2 2"/>'),
+  ungroup: ic('<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>'),
+  hole: ic('<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 2"/>'),
+  floor: ic('<path d="M3 20h18"/><path d="M12 4v11M8 11l4 4 4-4"/>'),
   copy: ic('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/>'),
 };
 
@@ -237,6 +251,32 @@ export const FEATURES = {
     label: "Delete Part", hint: "Remove a part from the model.",
     defaults: () => ({ body: "last" }),
     fields: [{ key: "body", label: "Part", type: "body" }],
+  },
+  casting: {
+    label: "Casting", hint: "Turns a part into a castable pattern: auto sprue, runners, gates, risers & vents, shrink allowance, optional mold halves — and tells you which metals work.",
+    defaults: () => ({ body: "last", process: "sand", metal: "aluminum", furnace: 1100, autoParting: true, parting: 0, head: 0, gates: 0, risers: true, vents: true, shrink: true, mold: false, wall: 15 }),
+    fields: [
+      { key: "body", label: "Part", type: "body" },
+      { key: "process", label: "Process", type: "select", options: Object.entries(PROCESSES).map(([k, v]) => [k, v.name]) },
+      { key: "metal", label: "Pour", type: "select", options: Object.entries(METALS).map(([k, v]) => [k, `${v.name} (${v.pour} °C)`]) },
+      { key: "furnace", label: "Your heat source", type: "select", num: true, options: FURNACES.map(([v, l]) => [v, l]) },
+      { key: "mold", label: "Make mold halves", type: "bool", show: (p) => PROCESSES[p.process]?.mold },
+      { key: "mold", label: "Split pattern at parting line", type: "bool", show: (p) => PROCESSES[p.process]?.splitPattern },
+      { key: "wall", label: "Mold wall", type: "num", show: (p) => PROCESSES[p.process]?.mold && p.mold },
+      { key: "autoParting", label: "Auto parting line (widest section)", type: "bool", adv: true },
+      { key: "parting", label: "Parting height Z", type: "num", adv: true, show: (p) => !p.autoParting },
+      { key: "gates", label: "Gates (0 = auto)", type: "num", adv: true },
+      { key: "head", label: "Min. sprue head", type: "num", adv: true, tip: "Height of the sprue above the part. 0 = auto." },
+      { key: "risers", label: "Risers (feeders)", type: "bool", adv: true },
+      { key: "vents", label: "Vents", type: "bool", adv: true },
+      { key: "shrink", label: "Shrinkage allowance", type: "bool", adv: true },
+      { key: "report", label: "", type: "report" },
+    ],
+  },
+  tinker: {
+    label: "Tinker scene", hint: "Shapes placed in Tinker mode. Switch to Tinker (top bar) to edit them.",
+    defaults: () => ({ objects: [] }),
+    fields: [],
   },
   import: {
     label: "Import", hint: "Bring in a STEP (or STL) file as a part.",

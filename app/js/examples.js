@@ -6,6 +6,31 @@ const proj = (name, features, extra = {}) => ({ version: 1, name, units: "mm", m
 
 export const EXAMPLES = [
   {
+    name: "Tinker: keychain tag",
+    desc: "Tinker mode — a rounded plate, a star on top, and a hole grouped in for the key ring.",
+    mode: "tinker",
+    build() {
+      const o = (kind, extra) => ({ id: id(), kind, name: kind[0].toUpperCase() + kind.slice(1), x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, hole: false, ...extra });
+      const plate = o("box", { name: "Plate", w: 50, d: 30, h: 4, r: 6 });
+      const ring = o("cylinder", { name: "Key hole", x: -17, w: 7, d: 7, h: 4, hole: true });
+      const tag = { id: id(), kind: "group", name: "Tag", children: [plate, ring], tx: 0, ty: 0, tz: 0, rz: 0, px: 0, py: 0, hole: false };
+      const star = o("star", { name: "Star", x: 8, w: 22, d: 22, h: 3, z: 4, sides: 5, inner: 0.45 });
+      const t = F("tinker", "Tinker scene", { objects: [tag, star] });
+      return proj("Keychain tag", [t], { parts: { ["t" + tag.id]: { color: "#3fa7e8", visible: true }, ["t" + star.id]: { color: "#f2d531", visible: true } } });
+    },
+  },
+  {
+    name: "Cast aluminum flange",
+    desc: "Casting — sand-cast flange with auto sprue, runner, gates, riser and vents, plus the metal check.",
+    build() {
+      const base = F("cylinder", "Flange", { dia: 90, h: 12, x: 0, y: 0, z: 0, axis: "Z", op: "new", target: "auto" });
+      const boss = F("cone", "Boss", { d1: 50, d2: 44, h: 28, x: 0, y: 0, z: 0, op: "add", target: "auto" });
+      const bore = F("cylinder", "Bore", { dia: 24, h: 100, x: 0, y: 0, z: -10, axis: "Z", op: "cut", target: "auto" });
+      const c = F("casting", "Casting", { body: "last", process: "sand", metal: "aluminum", furnace: 1100, autoParting: true, parting: 0, head: 0, gates: 0, risers: true, vents: true, shrink: true, mold: false, wall: 15 });
+      return proj("Cast flange", [base, boss, bore, c], { material: "Aluminum" });
+    },
+  },
+  {
     name: "Storage box",
     desc: "Sketch → Extrude → Fillet → Shell. Uses variables so you can resize it.",
     build() {

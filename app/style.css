@@ -194,3 +194,22 @@ details.adv[open] { display: flex; flex-direction: column; gap: 9px; }
 #ctx button.danger { color: var(--red); }
 #ctx hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 ::-webkit-scrollbar { width: 9px; height: 9px; } ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
+.seg.mode button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; font-weight: 600; }
+.seg.mode .ic { width: 16px; height: 16px; }
+.dot { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.swatch { width: 20px; height: 20px; border-radius: 5px; border: 2px solid transparent; padding: 0; }
+.swatch.on { border-color: var(--text); }
+.rb.holebtn .ic { opacity: .55; outline: 1px dashed var(--muted); outline-offset: 2px; border-radius: 3px; }
+.creport { display: flex; flex-direction: column; gap: 6px; }
+.ctip { color: var(--muted); font-size: 12px; background: var(--panel2); border-radius: 7px; padding: 7px 9px; }
+.cwarn { background: #ffcf4a1a; border: 1px solid #ffcf4a66; border-radius: 7px; padding: 7px 9px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.metal { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 7px; cursor: pointer; border: 1px solid transparent; }
+.metal:hover { background: var(--panel2); }
+.metal.cur { border-color: var(--accent); }
+.metal .mi { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 12px; flex: none; }
+.metal.ok .mi { background: #4cd38a33; color: var(--green); }
+.metal.risky .mi { background: #ffcf4a33; color: var(--yellow); }
+.metal.no .mi { background: #ff5d5d2a; color: var(--red); }
+.metal.no .mn { color: var(--muted); }
+.mn small { color: var(--muted); }
+.mw { font-size: 11.5px; color: var(--muted); margin-top: 2px; }

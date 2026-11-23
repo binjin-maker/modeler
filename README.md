@@ -19,6 +19,8 @@ It needs Microsoft Edge or Chrome, which every Windows 10/11 PC already has.
 - **Multi-part**: Move / Rotate / Copy, Scale, Combine (join / subtract / intersect), Split, Delete, plus STEP and STL import.
 - **Parametric history**: edit any feature, suppress it, roll back, reorder, duplicate. Unlimited undo / redo.
 - **Variables and math in every number box**: `width/2 + wall`, `sqrt(2)*10`, `2*inch`.
+- **Tinker mode**: Tinkercad-style. Drop in boxes, cylinders, spheres, cones, pyramids, wedges, tubes, tori, domes, prisms, and stars. Drag to move, pull handles to resize, lift, or rotate. Turn shapes into holes, group/ungroup, align. The result is one feature you can keep editing in Pro.
+- **Casting**: makes any part castable. It adds a basin, a tapered sprue and well, a center-fed runner, even gates, risers on the thick spots, vents, and a shrink allowance, and can build two-part molds with keys. It checks 13 metals and materials against your mold type and heat source (✓ / risky / ✕ with reasons) and gives you a pour plan (temperature, weights, crucible size, pour time).
 - **Inspect**: measure distance, length, area, angle, and gap; section view; volume, surface area, and mass for 10 materials.
 - **Export**: 3MF, STL, STEP, OBJ, PNG, plus **Send to Bambu Studio** with one click.
 - Autosave, a dark or light theme, 5 example projects, and a full in-app guide (F1).

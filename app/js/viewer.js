@@ -35,6 +35,8 @@ export class Viewer {
 
     this.pickGroup = new THREE.Group();
     this.scene.add(this.pickGroup);
+    this.handleGroup = new THREE.Group();
+    this.scene.add(this.handleGroup);
     this.bodyGroup = new THREE.Group();
     this.sketchGroup = new THREE.Group();
     this.overlayGroup = new THREE.Group();
@@ -63,6 +65,21 @@ export class Viewer {
     this.mouse = new THREE.Vector2();
     this.downAt = null;
     const dom = this.renderer.domElement;
+    el.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || !this.cb.onCaptureDown) return;
+      if (this.cb.onCaptureDown(e)) {
+        this.capturing = true;
+        this.controls.enabled = false;
+        dom.setPointerCapture?.(e.pointerId);
+      }
+    }, true);
+    window.addEventListener("pointermove", (e) => { if (this.capturing) this.cb.onCaptureMove?.(e); });
+    window.addEventListener("pointerup", (e) => {
+      if (!this.capturing) return;
+      this.capturing = false;
+      this.controls.enabled = true;
+      this.cb.onCaptureUp?.(e);
+    });
     dom.addEventListener("pointerdown", (e) => this.onDown(e));
     dom.addEventListener("pointermove", (e) => this.onMove(e));
     dom.addEventListener("pointerup", (e) => this.onUp(e));
@@ -166,6 +183,7 @@ export class Viewer {
   // ---------- bodies ----------
   setBodies(list, parts) {
     const seen = new Set();
+    let order = 0;
     for (const b of list) {
       seen.add(b.id);
       const meta = parts[b.id] || {};
@@ -175,9 +193,12 @@ export class Viewer {
         cur = b.error ? { data: b } : this.buildBody(b);
         this.bodies.set(b.id, cur);
       }
-      cur.color = new THREE.Color(meta.color || "#9db4cc");
+      cur.color = new THREE.Color(b.ghost ? "#9aa9ba" : meta.color || "#9db4cc");
       cur.visible = meta.visible !== false;
-      if (cur.mesh) { cur.mesh.visible = cur.visible; cur.lines.visible = cur.visible && this.showEdges; }
+      if (cur.mesh) {
+        cur.mesh.visible = cur.visible; cur.lines.visible = cur.visible && this.showEdges;
+        if (!b.ghost) cur.mesh.material.polygonOffsetUnits = 1 + (order++ % 24) * 0.75;
+      }
       this.paint(b.id);
     }
     for (const [id, cur] of this.bodies) if (!seen.has(id)) { this.disposeBody(cur); this.bodies.delete(id); }
@@ -195,11 +216,13 @@ export class Viewer {
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geo.computeBoundingSphere();
     geo.computeBoundingBox();
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = b.ghost
+      ? new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, opacity: 0.32, depthWrite: false, roughness: 0.4, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 })
+      : new THREE.MeshStandardMaterial({
       vertexColors: true, metalness: 0.08, roughness: 0.55, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
     });
-    mat.onBeforeCompile = (sh) => {
+    if (!b.ghost) mat.onBeforeCompile = (sh) => {
       sh.fragmentShader = sh.fragmentShader.replace(
         "#include <dithering_fragment>",
         "#include <dithering_fragment>\n if(!gl_FrontFacing){ gl_FragColor.rgb = vec3(0.95,0.35,0.25); }"
@@ -207,6 +230,7 @@ export class Viewer {
     };
     const mesh = new THREE.Mesh(geo, mat);
     mesh.userData.bodyId = b.id;
+    if (b.ghost) mesh.renderOrder = 2;
     // vertex ranges per face
     const idx = b.triangles;
     const faceVerts = b.faces.map((f) => {
@@ -218,7 +242,7 @@ export class Viewer {
     lgeo.setAttribute("position", new THREE.BufferAttribute(b.lines, 3));
     const lcol = new Float32Array(b.lines.length);
     lgeo.setAttribute("color", new THREE.BufferAttribute(lcol, 3));
-    const lines = new THREE.LineSegments(lgeo, new THREE.LineBasicMaterial({ vertexColors: true }));
+    const lines = new THREE.LineSegments(lgeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: !!b.ghost, opacity: b.ghost ? 0.5 : 1 }));
     lines.userData.bodyId = b.id;
     this.bodyGroup.add(mesh, lines);
     // edge segments: meshEdges gives polylines per edge as point pairs
@@ -237,7 +261,8 @@ export class Viewer {
     if (!cur || !cur.mesh) return;
     const b = cur.data;
     const col = cur.mesh.geometry.attributes.color;
-    const base = this.selectedPart === id ? cur.color.clone().lerp(SEL_PART, 0.45) : cur.color;
+    const sel = Array.isArray(this.selectedPart) ? this.selectedPart.includes(id) : this.selectedPart === id;
+    const base = sel ? cur.color.clone().lerp(SEL_PART, 0.45) : cur.color;
     for (let i = 0; i < col.count; i++) col.setXYZ(i, base.r, base.g, base.b);
     const paintFace = (fi, c) => {
       const [mn, mx] = cur.faceVerts[fi] || [];
@@ -400,6 +425,58 @@ export class Viewer {
     const n = new THREE.Vector3(...pl.n).normalize();
     const y = new THREE.Vector3().crossVectors(n, new THREE.Vector3(...pl.x)).normalize();
     this.viewDir(n, y, new THREE.Vector3(...pl.o));
+  }
+
+  // ---------- tinker helpers ----------
+  setBodyMatrix(id, m) {
+    const cur = this.bodies.get(id);
+    if (!cur || !cur.mesh) return;
+    for (const o of [cur.mesh, cur.lines]) {
+      if (m) { o.matrixAutoUpdate = false; o.matrix.copy(m); }
+      else { o.matrixAutoUpdate = true; o.position.set(0, 0, 0); o.scale.set(1, 1, 1); o.rotation.set(0, 0, 0); o.updateMatrix(); }
+    }
+  }
+  bodyBox(id) {
+    const cur = this.bodies.get(id);
+    return cur && cur.mesh ? cur.mesh.geometry.boundingBox.clone() : null;
+  }
+  setHandles(list) {
+    for (const ch of [...this.handleGroup.children]) { this.handleGroup.remove(ch); ch.geometry.dispose(); ch.material.dispose(); }
+    for (const hd of list || []) {
+      const geo = hd.shape === "cone" ? new THREE.ConeGeometry(hd.size * 0.7, hd.size * 1.6, 16) : hd.shape === "ring" ? new THREE.TorusGeometry(hd.size * 2.2, hd.size * 0.22, 8, 40) : new THREE.BoxGeometry(hd.size, hd.size, hd.size);
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: hd.color, depthTest: false, transparent: true }));
+      m.position.set(...hd.pos);
+      if (hd.shape === "cone") m.rotation.x = Math.PI / 2;
+      m.renderOrder = 10;
+      m.userData.handle = hd.id;
+      this.handleGroup.add(m);
+    }
+  }
+  hitHandle(e) {
+    this.raycaster.setFromCamera(this.ndc(e), this.camera);
+    const h = this.raycaster.intersectObjects(this.handleGroup.children, false)[0];
+    return h ? h.object.userData.handle : null;
+  }
+  setPlacer(box) {
+    if (this.placer) { this.scene.remove(this.placer); this.placer.geometry.dispose(); this.placer.material.dispose(); this.placer = null; }
+    if (!box) return;
+    const b = new THREE.Box3(new THREE.Vector3(...box.min), new THREE.Vector3(...box.max));
+    this.placer = new THREE.Box3Helper(b, 0xff9a40);
+    this.placer.renderOrder = 9;
+    this.scene.add(this.placer);
+  }
+  planeZ(e, z) {
+    this.raycaster.setFromCamera(this.ndc(e), this.camera);
+    const p = new THREE.Vector3();
+    return this.raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), -z), p) ? p.toArray() : null;
+  }
+  axisParam(e, origin, dir) {
+    this.raycaster.setFromCamera(this.ndc(e), this.camera);
+    const r = this.raycaster.ray, o = new THREE.Vector3(...origin), d = new THREE.Vector3(...dir).normalize();
+    const w0 = o.clone().sub(r.origin), a = d.dot(d), b = d.dot(r.direction), c = r.direction.dot(r.direction);
+    const dd = d.dot(w0), ee = r.direction.dot(w0), den = a * c - b * b;
+    if (Math.abs(den) < 1e-9) return null;
+    return (b * ee - c * dd) / den;
   }
 
   // ---------- sketches ----------
@@ -585,7 +662,7 @@ export class Viewer {
     if (h && this.pickMode === "edges" && h.kind !== "edge") want = null;
     if (h && (this.pickMode === "faces" || this.pickMode === "face-plane") && h.kind !== "face") want = null;
     if (h && this.pickMode === "face-plane" && h.info?.t !== "PLANE") want = null;
-    if (!this.pickMode && h) want = { ...h, kind: "face-none" };
+    if ((!this.pickMode || this.pickMode === "tinker") && h) want = { ...h, kind: "face-none" };
     const key = (x) => (x ? x.kind + x.body + x.index : "");
     if (key(want) !== key(this.hover)) this.setHover(want);
     this.cb.onHoverInfo?.(h);

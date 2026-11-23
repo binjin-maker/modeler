@@ -5,6 +5,8 @@ import { evalExpr, evalVariables, fmt } from "./expr.js";
 import { io, toOBJ, to3MF, fileToBase64 } from "./io.js";
 import { EXAMPLES } from "./examples.js";
 import { renderMarkdown } from "./help.js";
+import { createTinker } from "./tinker.js";
+import { PROCESSES, METALS } from "./castingdb.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, attrs = {}, ...kids) => {
@@ -48,7 +50,9 @@ const S = {
   dirty: false,
   kernel: "loading",
   settings: loadSettings(),
+  mode: "pro",
 };
+let tinker;
 
 function loadSettings() {
   try { return Object.assign({ edges: true, grid: true, ortho: false, theme: "dark", quality: 1, autoReload: true }, JSON.parse(localStorage.getItem("dm.settings") || "{}")); }
@@ -106,7 +110,9 @@ function num(v, fallback = 0) { try { return evalExpr(v, vars()); } catch { retu
 function bodyName(id) {
   const meta = S.project.parts[id];
   if (meta?.name) return meta.name;
-  const i = S.build.bodies.findIndex((b) => b.id === id);
+  const b = S.build.bodies.find((x) => x.id === id);
+  if (b?.name) return b.name;
+  const i = S.build.bodies.filter((x) => !x.ghost).findIndex((x) => x.id === id);
   return "Part " + (i >= 0 ? i + 1 : "?");
 }
 function partMeta(id, idx) {
@@ -183,6 +189,7 @@ async function doBuild() {
   let until = activeCount();
   const selF = S.selected && feat(S.selected);
   if (selF && pickModeFor(selF) && !S.showResult) until = Math.min(until, fIndex(selF.id));
+  if (S.mode === "tinker") { const t = S.project.features.findIndex((f) => f.type === "tinker"); if (t >= 0) until = Math.min(until, t + 1); }
   const list = [];
   for (const f of S.project.features.slice(0, until)) {
     try { list.push(resolveFeature(f, vs)); }
@@ -198,6 +205,7 @@ async function doBuild() {
     viewer.updateGrid(sceneSize());
     if (!S.fitted && m.bodies.length) { S.fitted = true; viewer.fit(false); }
     refreshPicks();
+    tinker?.afterBuild();
   } else {
     toast("Kernel error: " + m.error, "err");
   }
@@ -528,6 +536,7 @@ function refreshPicks() {
   const f = S.selected && feat(S.selected);
   const mode = pickModeFor(f);
   if (S.editing) return;
+  if (S.mode === "tinker") { viewer.pickMode = "tinker"; viewer.setPicked([], []); return; }
   if (S.measure) { viewer.pickMode = "measure"; viewer.setPicked([], []); return; }
   if (S.facePlanePick) { viewer.pickMode = "face-plane"; viewer.setPicked([], []); return; }
   viewer.pickMode = mode;
@@ -536,6 +545,7 @@ function refreshPicks() {
   else viewer.setPicked([], []);
 }
 function onPick(hit, e) {
+  if (S.mode === "tinker") return tinker.pick(hit, e);
   if (S.facePlanePick) {
     if (hit && hit.kind === "face" && hit.info?.t === "PLANE") {
       const cb = S.facePlanePick;
@@ -712,6 +722,18 @@ function loadProject(p, savedName) {
 }
 
 // ---------- UI rendering ----------
+function setMode(m) {
+  if (m === S.mode) return;
+  if (S.editing) finishSketch();
+  if (S.measure) stopMeasure();
+  S.mode = m;
+  S.settings.mode = m; saveSettings();
+  S.selected = null; S.part = null;
+  if (m === "tinker") { tinker.ensure(); viewer.pickMode = "tinker"; }
+  else { viewer.pickMode = null; viewer.setHandles([]); tinker.T.sel = []; viewer.setSelectedPart(null); }
+  rebuild(0);
+  renderAll();
+}
 function renderAll() { renderTop(); renderRibbon(); renderTree(); renderParts(); renderProps(); renderStatus(); renderSketchOverlay(); renderViewbar(); refreshPicks(); }
 
 function btn(icon, label, fn, opts = {}) {
@@ -737,6 +759,9 @@ function renderTop() {
       iconBtn("redo", "Redo (Ctrl+Y)", redo, hist.idx >= hist.stack.length - 1),
     ),
     h("div", { class: "grow" }),
+    h("div", { class: "seg mode" },
+      h("button", { class: S.mode === "pro" ? "on" : "", title: "Full parametric CAD", onclick: () => setMode("pro") }, h("span", { class: "ic", html: ICONS.pro }), "Pro"),
+      h("button", { class: S.mode === "tinker" ? "on" : "", title: "Simple drag-and-drop shapes (like Tinkercad)", onclick: () => setMode("tinker") }, h("span", { class: "ic", html: ICONS.tinker }), "Tinker")),
     h("select", { class: "units", title: "Units", onchange: (e) => { S.project.units = e.target.value; commit(true); renderAll(); } },
       ...["mm", "in"].map((u) => h("option", { value: u, selected: S.project.units === u }, u))),
     iconBtn("examples", "Examples & tutorials", showExamples),
@@ -751,6 +776,7 @@ function renderRibbon() {
   const r = $("#ribbon");
   r.innerHTML = "";
   const grp = (title, ...items) => h("div", { class: "grp" }, h("div", { class: "items" }, ...items), h("div", { class: "gt" }, title));
+  if (S.mode === "tinker") return tinker.ribbon(r);
   if (S.editing) {
     const t = (id, icon, label, key) => btn(icon, label, () => { S.tool = id; S.draft = []; renderRibbon(); renderSketchOverlay(); hint(TOOL_HINT[id]); }, { active: S.tool === id, key });
     r.append(
@@ -778,6 +804,7 @@ function renderRibbon() {
     grp("Shapes", a("box", null, "B"), a("cylinder"), a("sphere"), a("cone"), a("torus")),
     grp("Modify", a("fillet", null, "F"), a("chamfer"), a("shell"), a("draft")),
     grp("Copy", a("pattern_linear", "Linear"), a("pattern_circular", "Circular"), a("mirror", null, "M")),
+    grp("Make", a("casting", null, null, "Make it castable: sprue, runners, gates, risers, vents, molds + metal check")),
     grp("Parts", a("move", "Move"), a("scale"), a("boolean"), a("split"), a("remove", "Delete"), btn("import", "Import", importFile, { tip: "Import STEP / STL" })),
     grp("Inspect",
       btn("measure", "Measure", () => (S.measure ? stopMeasure() : startMeasure()), { active: !!S.measure, key: "Q" }),
@@ -802,6 +829,8 @@ function cutFlip() {
 
 function renderTree() {
   const el = $("#tree");
+  if (S.mode === "tinker") { $("#treetitle").textContent = "Shapes"; return tinker.tree(el); }
+  $("#treetitle").textContent = "Features";
   el.innerHTML = "";
   const n = activeCount();
   const fs = S.project.features;
@@ -867,8 +896,9 @@ function hideMenu() { $("#ctx").style.display = "none"; }
 function renderParts() {
   const el = $("#parts");
   el.innerHTML = "";
-  if (!S.build.bodies.length) { el.append(h("div", { class: "empty" }, "Parts you make show up here.")); return; }
-  for (const b of S.build.bodies) {
+  const real = S.build.bodies.filter((b) => !b.ghost);
+  if (!real.length) { el.append(h("div", { class: "empty" }, "Parts you make show up here.")); return; }
+  for (const b of real) {
     const meta = partMeta(b.id);
     el.append(h("div", { class: "pi" + (S.part === b.id ? " sel" : ""), onclick: () => { S.part = b.id; S.selected = null; viewer.setSelectedPart(b.id); renderAll(); } },
       h("input", { type: "color", value: meta.color, title: "Color", onclick: (e) => e.stopPropagation(), oninput: (e) => { meta.color = e.target.value; viewer.setBodies(S.build.bodies, S.project.parts); commit(); } }),
@@ -884,6 +914,7 @@ function renderProps() {
   const el = $("#props");
   el.innerHTML = "";
   if (S.measure) return renderMeasureProps(el);
+  if (S.mode === "tinker") return tinker.props(el);
   if (S.editing) return renderSketchProps(el);
   const f = S.selected && feat(S.selected);
   if (f) return renderFeatureProps(el, f);
@@ -1025,8 +1056,10 @@ function fieldEl(f, fld, idx) {
       return h("label", { class: "tg" }, h("input", { type: "checkbox", checked: !!p[fld.key], onchange: (e) => setParam(f, fld.key, e.target.checked, { rerender: true }) }), h("span", {}, fld.label));
     case "seg":
       return wrap(h("div", { class: "seg" }, ...fld.options.map(([v, l]) => h("button", { class: p[fld.key] === v ? "on" : "", onclick: (e) => { e.preventDefault(); setParam(f, fld.key, v, { rerender: true }); } }, l))));
+    case "report":
+      return castingReport(f);
     case "select":
-      return wrap(h("select", { onchange: (e) => { setParam(f, fld.key, e.target.value, { rerender: true }); if (fld.key === "sel") { rebuild(0); refreshPicks(); } } }, ...fld.options.map(([v, l]) => h("option", { value: v, selected: p[fld.key] === v }, l))));
+      return wrap(h("select", { onchange: (e) => { setParam(f, fld.key, fld.num ? +e.target.value : e.target.value, { rerender: true }); if (fld.key === "sel") { rebuild(0); refreshPicks(); } } }, ...fld.options.map(([v, l]) => h("option", { value: v, selected: p[fld.key] === v }, l))));
     case "sketch": {
       const sk = S.project.features.slice(0, idx).filter((x) => x.type === "sketch");
       return wrap(h("select", { onchange: (e) => setParam(f, fld.key, e.target.value, { rerender: true }) },
@@ -1056,6 +1089,44 @@ function fieldEl(f, fld, idx) {
       return wrap(h("div", { class: "row" }, h("span", { class: "muted" }, p.fileName || "No file"), h("button", { class: "btn sm", onclick: () => importFile(f) }, "Choose…")));
   }
   return h("div");
+}
+
+function castingReport(f) {
+  const r = S.build.status[f.id]?.report;
+  const box = h("div", { class: "creport" });
+  if (!r || r.kind !== "casting") { box.append(h("p", { class: "muted" }, S.build.status[f.id]?.error ? "Fix the error above to see the casting plan." : "Building casting plan…")); return box; }
+  const u = S.project.units, g = (v) => (v >= 1000 ? fmt(v / 1000, 2) + " kg" : fmt(v, 0) + " g");
+  box.append(h("div", { class: "ctip" }, r.tip));
+  if (r.warnings.length) box.append(h("div", { class: "cwarn" }, ...r.warnings.map((w) => h("div", {}, "⚠ " + w))));
+  box.append(h("div", { class: "sh" }, "Pour plan — " + r.metal), table([
+    ["Pour temperature", `${r.pour} °C`],
+    ["Casting weight", g(r.castG)],
+    ["Metal to melt", `${g(r.pourG)} (with gating)`],
+    ["Crucible size", `≥ ${r.crucibleMl} ml`],
+    ["Pour time", `~${fmt(r.pourTime, 1)} s, steady`],
+    ["Shrink allowance", r.shrink ? `+${r.shrink}% (applied)` : "none"],
+    ["Yield", `${fmt(r.yieldPct, 0)}% of the pour ends up in the part`],
+  ]));
+  box.append(h("div", { class: "sh" }, "Auto gating"), table([
+    ["Sprue", `Ø${fmt(r.Dch, 1)} → Ø${fmt(r.Dtop, 1)} ${u} (tapered), basin + well`],
+    ["Runner", `${fmt(r.runner, 1)} ${u} square, center-fed`],
+    ["Gates", `${r.gates} × ${fmt(r.gateT, 1)} × ${fmt(r.gateW, 1)} ${u}`],
+    ["Risers", r.risers ? `${r.risers} × Ø${fmt(r.riserD, 1)} ${u} on thick spots` : "none needed"],
+    ["Vents", r.vents ? `${r.vents} × Ø${fmt(r.ventD, 1)} ${u} at high points` : "none"],
+    ["Sprue head", `${fmt(r.head, 1)} ${u} above the part`],
+    ["Parting line", `Z = ${fmt(r.parting, 2)} ${u}`],
+    ["Walls", `${fmt(r.minWall, 1)}–${fmt(r.maxWall, 1)} ${u} thick`],
+    ...(r.flask ? [["Flask", `Ø${fmt(r.flask.d, 0)} × ${fmt(r.flask.h, 0)} ${u} or bigger`]] : []),
+    ...(r.mold ? [["Mold block", r.mold.size.map((v) => fmt(v, 0)).join(" × ") + " " + u]] : []),
+  ]));
+  box.append(h("div", { class: "sh" }, "What can you pour?"));
+  const order = { ok: 0, risky: 1, no: 2 };
+  for (const m of [...r.metals].sort((a, b) => order[a.status] - order[b.status] || a.pour - b.pour)) {
+    box.append(h("div", { class: "metal " + m.status + (m.key === r.metalKey ? " cur" : ""), title: m.note, onclick: () => setParam(f, "metal", m.key, { rerender: true }) },
+      h("span", { class: "mi" }, { ok: "✓", risky: "!", no: "✕" }[m.status]),
+      h("div", {}, h("div", { class: "mn" }, m.name, h("small", {}, ` ${m.pour} °C · ${g(m.castG)}`)), m.why.length ? h("div", { class: "mw" }, m.why.join(" · ")) : h("div", { class: "mw" }, m.note))));
+  }
+  return box;
 }
 
 function renderSketchProps(el) {
@@ -1281,7 +1352,7 @@ async function showHelp(section) {
 }
 function showExamples() {
   const body = h("div", { class: "mb" }, h("p", { class: "muted" }, "Open an example to see how it's built — click each feature in the tree to see its settings. (Your current work is autosaved; save it first if you want to keep it.)"),
-    h("div", { class: "cards" }, ...EXAMPLES.map((ex) => h("button", { class: "card", onclick: () => { closeModal(); loadProject(ex.build()); toast(`Loaded “${ex.name}”. Click features in the tree to inspect them.`); } }, h("b", {}, ex.name), h("small", {}, ex.desc)))));
+    h("div", { class: "cards" }, ...EXAMPLES.map((ex) => h("button", { class: "card", onclick: () => { closeModal(); loadProject(ex.build()); setMode(ex.mode || "pro"); toast(`Loaded “${ex.name}”. Click features in the tree to inspect them.`); } }, h("b", {}, ex.name), h("small", {}, ex.desc)))));
   modal("Examples & tutorials", body, { cls: "wide" });
 }
 async function importFile(existing) {
@@ -1317,6 +1388,7 @@ function onKey(e) {
   if (ctrl && e.key.toLowerCase() === "o") { e.preventDefault(); showOpen(); return; }
   if (e.key === "F1") { e.preventDefault(); showHelp(); return; }
   if (typing || $("#modal").style.display === "flex") { if (e.key === "Escape") closeModal(); return; }
+  if (S.mode === "tinker") { if (tinker.key(e)) return; if (["s", "e", "x", "v", "b", "m", "q"].includes(e.key.toLowerCase()) && !ctrl) return; }
   const k = e.key.toLowerCase();
   if (S.editing) {
     const tools = { l: "line", r: "rect", c: "circle", p: "polygon", o: "slot" };
@@ -1366,7 +1438,7 @@ async function boot() {
     <nav id="ribbon"></nav>
     <main>
       <aside id="left">
-        <div class="sec"><div class="st">Features</div><div id="tree"></div></div>
+        <div class="sec"><div class="st" id="treetitle">Features</div><div id="tree"></div></div>
         <div class="sec"><div class="st">Parts</div><div id="parts"></div></div>
       </aside>
       <div id="viewport"><div id="viewbar"></div><div id="sectionpanel"></div></div>
@@ -1377,6 +1449,7 @@ async function boot() {
   <div id="modal"></div><div id="toasts"></div><div id="ctx"></div>`;
   viewer = new Viewer($("#viewport"), {
     onPick, onSketchDown, onSketchMove, onSketchUp,
+    onCaptureDown: (e) => tinker?.captureDown(e), onCaptureMove: (e) => tinker?.captureMove(e), onCaptureUp: (e) => tinker?.captureUp(e),
     onDblClick: () => { if (S.editing && S.tool === "line" && S.draft.length >= 3) { addShape({ kind: "poly", pts: S.draft }); S.draft = []; renderSketchOverlay(); } },
     onHoverInfo: (hit) => {
       const el = $("#hov");
@@ -1386,7 +1459,8 @@ async function boot() {
       else el.textContent = `${bodyName(hit.body)} · ${(hit.info?.t || "").toLowerCase()} face · (${hit.point.map((v) => fmt(v, 1)).join(", ")})`;
     },
   });
-  window.__dm = { S, viewer, addFeature, rebuild, loadProject, exportAs, feat };
+  tinker = createTinker({ S, viewer, h, ICONS, toast, uid, commit, rebuild, renderAll, renderTree, renderProps, renderRibbon, btn, numInput, num, partMeta, activeCount });
+  window.__dm = { S, viewer, addFeature, rebuild, loadProject, exportAs, feat, tinker, setMode };
   viewer.setEdgesVisible(S.settings.edges);
   viewer.setGridVisible(S.settings.grid);
   if (S.settings.ortho) viewer.setOrtho(true);
@@ -1417,6 +1491,7 @@ async function boot() {
   }
   commit(true);
   S.dirty = false;
+  if (S.settings.mode === "tinker") { S.mode = "tinker"; tinker.ensure(); viewer.pickMode = "tinker"; }
   renderAll();
   rebuild(0);
   if (!localStorage.getItem("dm.welcomed")) {
